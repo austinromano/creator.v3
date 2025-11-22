@@ -140,10 +140,9 @@ export function StreamPlayer({ creator, isLive, viewers, className = '' }: Strea
   const qualityOptions = ['1080p', '720p', '480p', '360p'];
 
   return (
-    <Card className={`${className} bg-black border-gray-700 overflow-hidden`}>
-      <CardContent className="p-0 relative">
-        {/* Video Player Area */}
-        <div className="aspect-video bg-black relative group">
+    <div className={`${className} bg-black overflow-hidden relative group`}>
+      {/* Video Player Area */}
+      <div className="w-full h-full bg-black relative">
           {/* Stream Status Overlay */}
           <div className="absolute top-4 left-4 z-20 flex items-center space-x-3">
             <Badge 
@@ -290,30 +289,7 @@ export function StreamPlayer({ creator, isLive, viewers, className = '' }: Strea
               </div>
             </div>
           )}
-        </div>
-
-        {/* Stream Info Bar */}
-        <div className="p-4 bg-gray-800 border-t border-gray-700">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className={`w-3 h-3 rounded-full ${isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`} />
-              <span className="text-white font-semibold">
-                {isLive ? 'Broadcasting live' : 'Stream offline'}
-              </span>
-              {isLive && (
-                <span className="text-gray-400 text-sm">
-                  • Started 2 hours ago
-                </span>
-              )}
-            </div>
-            
-            <div className="text-right">
-              <p className="text-white font-semibold">${creator.symbol}</p>
-              <p className="text-gray-400 text-sm">${creator.price.toFixed(6)}</p>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

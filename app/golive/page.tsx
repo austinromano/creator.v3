@@ -262,12 +262,11 @@ export default function ProfilePage() {
         </div>
 
         {/* Main 2-Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-1 max-w-[1920px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 max-w-[1920px] mx-auto">
           {/* Stream Preview - Left Column (60%) */}
-          <div className="lg:col-span-2 bg-[#18181b]">
-            <div className="p-4">
-              {/* Video Preview */}
-              <div className="relative bg-black rounded aspect-video overflow-hidden">
+          <div className="lg:col-span-2 bg-[#0e0e10]">
+            {/* Video Preview */}
+            <div className="relative bg-black aspect-video overflow-hidden">
                 {isLive ? (
                   <video
                     ref={videoRef}
@@ -290,11 +289,13 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 )}
-              </div>
+            </div>
 
+            {/* Stream Info Below Video */}
+            <div className="p-4 bg-[#18181b]">
               {/* Stream Controls */}
               {isLive && (
-                <div className="mt-4 flex items-center gap-3">
+                <div className="mb-4 flex items-center gap-3">
                   <Button
                     variant="outline"
                     size="sm"
@@ -328,7 +329,7 @@ export default function ProfilePage() {
               )}
 
               {/* Stream Info */}
-              <div className="mt-4 flex items-center space-x-3">
+              <div className="flex items-center space-x-3">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={user.image || userToken.avatar} />
                   <AvatarFallback className="bg-purple-600">{initials}</AvatarFallback>

@@ -24,34 +24,11 @@ export const useLiveStream = (creatorSymbol: string) => {
     });
   };
 
-  // Simulate live updates
+  // Update viewer count from real stream data
   useEffect(() => {
-    if (!isLive) return;
-
-    const interval = setInterval(() => {
-      // Random viewer count changes
-      setViewers(prev => Math.max(0, prev + Math.floor(Math.random() * 10 - 5)));
-      
-      // Occasional new messages
-      if (Math.random() < 0.3) {
-        const users = ['CryptoFan123', 'DiamondHands', 'ToTheMoon', 'HODLer'];
-        const messageTemplates = [
-          'Love the content!',
-          'When moon?',
-          'Great stream!',
-          'Token looking good 🚀',
-          'LFG!!!',
-        ];
-        
-        addMessage({
-          user: users[Math.floor(Math.random() * users.length)],
-          message: messageTemplates[Math.floor(Math.random() * messageTemplates.length)],
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`,
-        });
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
+    if (!isLive) {
+      setViewers(0);
+    }
   }, [isLive]);
 
   return {
