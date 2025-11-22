@@ -14,14 +14,21 @@ import {
   TrendingUp,
   Settings,
   Mail,
-  Calendar,
   Radio,
-  StopCircle,
   DollarSign,
-  BarChart3,
   Eye,
-  Play,
   Loader2,
+  Clock,
+  Edit3,
+  Star,
+  MessageSquare,
+  ChevronDown,
+  Video,
+  VideoOff,
+  Mic,
+  MicOff,
+  Monitor,
+  Square,
 } from 'lucide-react';
 import { LiveStreamBroadcast } from '@/components/streaming/LiveStreamBroadcast';
 
@@ -30,6 +37,12 @@ export default function ProfilePage() {
   const router = useRouter();
   const { getTokenByCreator, updateToken } = useTokenStore();
   const [isLive, setIsLive] = useState(false);
+  const [sessionTime, setSessionTime] = useState(0);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [microphoneEnabled, setMicrophoneEnabled] = useState(true);
+  const [streamReady, setStreamReady] = useState(false);
 
   const user = session?.user as any;
   const userId = user?.id;
@@ -49,6 +62,35 @@ export default function ProfilePage() {
       setIsLive(userToken.isLive || false);
     }
   }, [userToken]);
+
+  // Session timer - must be before any returns
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isLive) {
+      interval = setInterval(() => {
+        setSessionTime((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isLive]);
+
+  // Assign stream to video element when both are available
+  useEffect(() => {
+    if (streamReady && streamRef.current && videoRef.current && isLive) {
+      console.log('Assigning stream to video element');
+      console.log('videoRef.current:', videoRef.current);
+      console.log('streamRef.current:', streamRef.current);
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(err => console.error('Error playing video:', err));
+    }
+  }, [isLive, streamReady]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   if (status === 'loading') {
     return (
@@ -71,8 +113,37 @@ export default function ProfilePage() {
     .toUpperCase()
     .slice(0, 2);
 
-  const handleGoLive = () => {
+  const startCamera = async () => {
+    try {
+      console.log('Starting camera...');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: cameraEnabled,
+        audio: microphoneEnabled
+      });
+      console.log('Stream obtained:', stream);
+      streamRef.current = stream;
+      setStreamReady(true);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      alert('Unable to access camera/microphone. Error: ' + error);
+    }
+  };
+
+  const stopCamera = () => {
+    console.log('Stopping camera...');
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setStreamReady(false);
+  };
+
+  const handleGoLive = async () => {
     if (userToken) {
+      await startCamera();
       setIsLive(true);
       updateToken(userToken.symbol, { isLive: true });
     }
@@ -80,285 +151,221 @@ export default function ProfilePage() {
 
   const handleEndStream = () => {
     if (userToken) {
+      stopCamera();
       setIsLive(false);
       updateToken(userToken.symbol, { isLive: false });
+      setSessionTime(0);
     }
   };
 
-  // If user has a token, show the broadcast dashboard
+  const toggleCamera = () => {
+    if (streamRef.current) {
+      const videoTrack = streamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setCameraEnabled(videoTrack.enabled);
+      }
+    }
+  };
+
+  const toggleMicrophone = () => {
+    if (streamRef.current) {
+      const audioTrack = streamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setMicrophoneEnabled(audioTrack.enabled);
+      }
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // If user has a token, show the Twitch-style stream manager
   if (userToken) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* User Profile Header */}
-        <div className="bg-gradient-to-r from-purple-900/20 to-pink-900/20 rounded-lg border border-gray-800 p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Avatar className="h-20 w-20 border-4 border-purple-500">
-                <AvatarImage src={user.image || userToken.avatar} />
-                <AvatarFallback className="bg-purple-600 text-white text-2xl">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-2xl font-bold text-white">{username}</h1>
-                  <Badge className="bg-green-600 text-white">Active</Badge>
-                </div>
-                <div className="flex flex-col space-y-1 text-sm text-gray-400">
-                  {user.walletAddress && (
-                    <div className="flex items-center space-x-2">
-                      <Wallet className="h-4 w-4" />
-                      <span className="font-mono">
-                        {user.walletAddress.slice(0, 8)}...{user.walletAddress.slice(-6)}
-                      </span>
-                    </div>
-                  )}
-                  {user.email && !user.walletAddress && (
-                    <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4" />
-                      <span>{user.email}</span>
-                    </div>
-                  )}
-                  {user.provider && (
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-gray-500">
-                        Connected via {user.provider === 'phantom' ? 'Phantom Wallet' : user.provider === 'google' ? 'Google' : 'Email'}
-                      </span>
-                    </div>
-                  )}
-                </div>
+      <div className="min-h-screen bg-[#0e0e10] text-white">
+        {/* Top Stats Bar */}
+        <div className="bg-[#18181b] border-b border-gray-800 px-4 py-2">
+          <div className="flex items-center justify-between max-w-[1920px] mx-auto">
+            <div className="flex items-center space-x-2">
+            </div>
+            <div className="flex items-center space-x-8 text-sm">
+              <div className="text-center">
+                <div className="text-xl font-bold">{formatTime(sessionTime)}</div>
+                <div className="text-xs text-gray-400">Session</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-bold">{userToken.viewers || 0}</div>
+                <div className="text-xs text-gray-400">Viewers</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-bold">{userToken.holders}</div>
+                <div className="text-xs text-gray-400">Followers</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-bold">${userToken.marketCap.toLocaleString()}</div>
+                <div className="text-xs text-gray-400">Market Cap</div>
               </div>
             </div>
-            {isLive && (
-              <Badge className="bg-red-600 text-white px-4 py-2 text-lg animate-pulse">
-                <Radio className="h-5 w-5 mr-2" />
-                LIVE
-              </Badge>
-            )}
           </div>
         </div>
 
-        {/* User Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="bg-gray-900 border-gray-800 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Reputation</p>
-                <p className="text-3xl font-bold text-white mt-1">0</p>
-              </div>
-              <Trophy className="h-12 w-12 text-yellow-500" />
+        {/* Main 2-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-1 max-w-[1920px] mx-auto">
+          {/* Stream Preview - Left Column (60%) */}
+          <div className="lg:col-span-2 bg-[#18181b]">
+            <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-end">
+              <Settings className="h-4 w-4 text-gray-400 cursor-pointer hover:text-white" />
             </div>
-          </Card>
 
-          <Card className="bg-gray-900 border-gray-800 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">SOL Received</p>
-                <p className="text-3xl font-bold text-white mt-1">0.00</p>
-                <p className="text-xs text-gray-500 mt-1">SOL</p>
-              </div>
-              <Wallet className="h-12 w-12 text-purple-500" />
-            </div>
-          </Card>
-
-          <Card className="bg-gray-900 border-gray-800 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Followers</p>
-                <p className="text-3xl font-bold text-white mt-1">0</p>
-              </div>
-              <Users className="h-12 w-12 text-blue-500" />
-            </div>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Broadcast Section */}
-          <div className="lg:col-span-2">
-            <Card className="bg-gray-900 border-gray-800 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Live Broadcast</h2>
-                  <p className="text-gray-400">
-                    Share your screen and connect with your community
-                  </p>
-                </div>
-                {!isLive ? (
-                  <Button
-                    onClick={handleGoLive}
-                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-3"
-                  >
-                    <Play className="h-5 w-5 mr-2" />
-                    Go Live
-                  </Button>
+            <div className="p-4">
+              {/* Video Preview */}
+              <div className="relative bg-black rounded aspect-video overflow-hidden">
+                {isLive ? (
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  <Button
-                    onClick={handleEndStream}
-                    variant="destructive"
-                    className="bg-gray-800 hover:bg-gray-700 px-6 py-3"
-                  >
-                    <StopCircle className="h-5 w-5 mr-2" />
-                    End Stream
-                  </Button>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-6xl font-bold text-gray-600 mb-4">OFFLINE</div>
+                      <Button
+                        onClick={handleGoLive}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        <Radio className="h-4 w-4 mr-2" />
+                        Go Live
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
 
-              {isLive ? (
-                <LiveStreamBroadcast
-                  creatorId={user?.id}
-                  creatorName={user?.name || 'Creator'}
-                  onEnd={handleEndStream}
-                />
-              ) : (
-                <div className="bg-gray-800/50 rounded-lg p-12 text-center border-2 border-dashed border-gray-700">
-                  <Radio className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    Ready to Go Live?
-                  </h3>
-                  <p className="text-gray-400 mb-6">
-                    Start broadcasting to engage with your token holders and grow your community.
-                  </p>
+              {/* Stream Controls */}
+              {isLive && (
+                <div className="mt-4 flex items-center gap-3">
                   <Button
-                    onClick={handleGoLive}
-                    className="bg-red-600 hover:bg-red-700"
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleCamera}
+                    className={`${cameraEnabled ? 'text-green-400 border-green-400' : 'text-red-400 border-red-400'}`}
                   >
-                    <Play className="h-5 w-5 mr-2" />
-                    Start Broadcasting
+                    {cameraEnabled ? <Video className="h-4 w-4 mr-1" /> : <VideoOff className="h-4 w-4 mr-1" />}
+                    {cameraEnabled ? 'Camera On' : 'Camera Off'}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleMicrophone}
+                    className={`${microphoneEnabled ? 'text-green-400 border-green-400' : 'text-red-400 border-red-400'}`}
+                  >
+                    {microphoneEnabled ? <Mic className="h-4 w-4 mr-1" /> : <MicOff className="h-4 w-4 mr-1" />}
+                    {microphoneEnabled ? 'Mic On' : 'Mic Off'}
+                  </Button>
+
+                  <Button
+                    onClick={handleEndStream}
+                    variant="destructive"
+                    size="sm"
+                    className="bg-red-600 hover:bg-red-700 ml-auto"
+                  >
+                    <Square className="h-4 w-4 mr-1" />
+                    Stop Stream
                   </Button>
                 </div>
               )}
-            </Card>
-          </div>
 
-          {/* Token Stats & Performance */}
-          <div className="space-y-6">
-            {/* Token Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="bg-gray-900 border-gray-800 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-xs mb-1">Market Cap</p>
-                    <p className="text-xl font-bold text-white">
-                      ${userToken.marketCap.toLocaleString()}
-                    </p>
-                  </div>
-                  <DollarSign className="h-8 w-8 text-green-500" />
-                </div>
-              </Card>
-
-              <Card className="bg-gray-900 border-gray-800 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-xs mb-1">Holders</p>
-                    <p className="text-xl font-bold text-white">{userToken.holders}</p>
-                  </div>
-                  <Users className="h-8 w-8 text-blue-500" />
-                </div>
-              </Card>
-
-              <Card className="bg-gray-900 border-gray-800 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-xs mb-1">24h Volume</p>
-                    <p className="text-xl font-bold text-white">
-                      {userToken.volume24h.toFixed(2)} SOL
-                    </p>
-                  </div>
-                  <TrendingUp className="h-8 w-8 text-purple-500" />
-                </div>
-              </Card>
-
-              <Card className="bg-gray-900 border-gray-800 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-xs mb-1">Current Viewers</p>
-                    <p className="text-xl font-bold text-white">
-                      {userToken.viewers || 0}
-                    </p>
-                  </div>
-                  <Eye className="h-8 w-8 text-yellow-500" />
-                </div>
-              </Card>
-            </div>
-
-            {/* Token Performance */}
-            <Card className="bg-gray-900 border-gray-800 p-6">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2 text-purple-500" />
-                Token Performance
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-400">Bonding Curve Progress</span>
-                    <span className="text-white font-semibold">
-                      {userToken.bondingCurve}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-800 rounded-full h-2">
-                    <div
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all"
-                      style={{ width: `${userToken.bondingCurve}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Goal: $85K Market Cap for Raydium listing
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t border-gray-800">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-400 text-sm">Price</span>
-                    <span className="text-white font-semibold">
-                      {userToken.price.toFixed(8)} SOL
-                    </span>
-                  </div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-400 text-sm">24h Change</span>
-                    <span
-                      className={`font-semibold ${
-                        userToken.priceChange24h >= 0
-                          ? 'text-green-400'
-                          : 'text-red-400'
-                      }`}
-                    >
-                      {userToken.priceChange24h >= 0 ? '+' : ''}
-                      {userToken.priceChange24h.toFixed(2)}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400 text-sm">Transactions</span>
-                    <span className="text-white font-semibold">
-                      {userToken.transactions}
-                    </span>
-                  </div>
+              {/* Stream Info */}
+              <div className="mt-4 flex items-center space-x-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={user.image || userToken.avatar} />
+                  <AvatarFallback className="bg-purple-600">{initials}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="font-semibold">Live!</div>
+                  <Badge className={isLive ? "bg-red-600" : "bg-gray-600"}>
+                    {isLive ? "LIVE" : "OFFLINE"}
+                  </Badge>
                 </div>
               </div>
-            </Card>
 
-            {/* Pro Tips */}
-            <Card className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-purple-600/50 p-6">
-              <h3 className="text-lg font-bold text-white mb-3">Pro Tips</h3>
-              <ul className="space-y-2 text-sm text-gray-300">
-                <li className="flex items-start">
-                  <span className="text-purple-400 mr-2">•</span>
-                  <span>Stream regularly to build a loyal community</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-purple-400 mr-2">•</span>
-                  <span>Engage with your chat and respond to questions</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-purple-400 mr-2">•</span>
-                  <span>Share your stream on social media to grow your audience</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-purple-400 mr-2">•</span>
-                  <span>Higher market cap = more visibility on the platform</span>
-                </li>
-              </ul>
-            </Card>
+              {/* Quick Actions */}
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold">Quick Actions</h3>
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <Button className="bg-purple-600 hover:bg-purple-700 flex-col h-auto py-4">
+                    <Edit3 className="h-5 w-5 mb-2" />
+                    <span className="text-xs">Edit Stream Info</span>
+                  </Button>
+                  <Button className="bg-pink-600 hover:bg-pink-700 flex-col h-auto py-4">
+                    <DollarSign className="h-5 w-5 mb-2" />
+                    <span className="text-xs">Manage Goals</span>
+                  </Button>
+                  <Button className="bg-purple-700 hover:bg-purple-800 flex-col h-auto py-4">
+                    <Star className="h-5 w-5 mb-2" />
+                    <span className="text-xs">Token Stats</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Chat + Activity Feed - Right Column */}
+          <div className="bg-[#18181b] border-l border-gray-800">
+            {/* My Chat */}
+            <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <h2 className="text-sm font-semibold">My Chat</h2>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+
+            <div className="p-4 h-[300px] overflow-y-auto">
+              <div className="text-sm text-gray-400 text-center py-8">
+                <MessageSquare className="h-12 w-12 mx-auto mb-2 text-gray-600" />
+                <p>Welcome to the chat room!</p>
+                {!isLive && <p className="text-xs mt-2">Chat will be active when streaming</p>}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-800 p-3">
+              <input
+                type="text"
+                placeholder="Send a message"
+                className="w-full bg-[#0e0e10] border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+                disabled={!isLive}
+              />
+            </div>
+
+            {/* Activity Feed */}
+            <div className="border-t border-gray-800 px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <h2 className="text-sm font-semibold">Activity Feed</h2>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+
+            <div className="p-4 h-[300px] overflow-y-auto">
+              <div className="text-center py-12">
+                <div className="text-2xl font-bold mb-2">It's quiet. Too quiet...</div>
+                <p className="text-sm text-gray-400">
+                  We'll show your new follows, tips, and activity here.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
