@@ -192,25 +192,51 @@ export default function ProfilePage() {
         {/* Top Stats Bar */}
         <div className="bg-[#18181b] border-b border-gray-800 px-4 py-2">
           <div className="flex items-center justify-between max-w-[1920px] mx-auto">
-            <div className="flex items-center space-x-2">
-            </div>
             <div className="flex items-center space-x-8 text-sm">
-              <div className="text-center">
-                <div className="text-xl font-bold">{formatTime(sessionTime)}</div>
-                <div className="text-xs text-gray-400">Session</div>
+              <div className="flex items-center space-x-2">
+                <Clock className="h-5 w-5 text-blue-400" />
+                <div>
+                  <div className="text-xl font-bold">{formatTime(sessionTime)}</div>
+                  <div className="text-xs text-gray-400">Session</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-xl font-bold">{userToken.viewers || 0}</div>
-                <div className="text-xs text-gray-400">Viewers</div>
+              <div className="flex items-center space-x-2">
+                <Eye className="h-5 w-5 text-yellow-400" />
+                <div>
+                  <div className="text-xl font-bold">{userToken.viewers || 0}</div>
+                  <div className="text-xs text-gray-400">Viewers</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-xl font-bold">{userToken.holders}</div>
-                <div className="text-xs text-gray-400">Followers</div>
+              <div className="flex items-center space-x-2">
+                <Users className="h-5 w-5 text-purple-400" />
+                <div>
+                  <div className="text-xl font-bold">{userToken.holders}</div>
+                  <div className="text-xs text-gray-400">Followers</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-xl font-bold">${userToken.marketCap.toLocaleString()}</div>
-                <div className="text-xs text-gray-400">Market Cap</div>
+              <div className="flex items-center space-x-2">
+                <DollarSign className="h-5 w-5 text-green-400" />
+                <div>
+                  <div className="text-xl font-bold">${userToken.marketCap.toLocaleString()}</div>
+                  <div className="text-xs text-gray-400">Market Cap</div>
+                </div>
               </div>
+              <div className="flex items-center space-x-2">
+                <Wallet className="h-5 w-5 text-orange-400" />
+                <div>
+                  <div className="text-xl font-bold">0.00 SOL</div>
+                  <div className="text-xs text-gray-400">SOL Received</div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Trophy className="h-5 w-5 text-yellow-500" />
+                <div>
+                  <div className="text-xl font-bold">-</div>
+                  <div className="text-xs text-gray-400">Ranking</div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
             </div>
           </div>
         </div>
