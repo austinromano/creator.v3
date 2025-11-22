@@ -28,15 +28,9 @@ export function LiveChat({ messages, onSendMessage, creatorSymbol, className = '
   const { isConnected, formatAddress } = useWallet();
   const [messageText, setMessageText] = useState('');
   const [showEmojis, setShowEmojis] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const emojis = ['😀', '😂', '❤️', '🚀', '🔥', '💎', '👏', '🌙', '⭐', '💯', '🎉', '🎊'];
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   const handleSendMessage = () => {
     if (!messageText.trim()) return;
@@ -81,139 +75,71 @@ export function LiveChat({ messages, onSendMessage, creatorSymbol, className = '
 
   return (
     <div className={`${className} flex flex-col h-full`}>
-      {/* Messages Area */}
-      <CardContent className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+      {/* Message Input - Flat Design */}
+      <div className="p-3 bg-[#18181b]">
+        <div className="flex items-center space-x-2">
+          <Input
+            ref={inputRef}
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={isConnected ? "Send a message" : "Connect wallet to chat"}
+            disabled={!isConnected}
+            className="bg-[#0e0e10] border-gray-700 text-white text-sm h-9 rounded-none"
+            maxLength={500}
+          />
+          <Button
+            onClick={handleSendMessage}
+            disabled={!isConnected || !messageText.trim()}
+            size="sm"
+            className="bg-gray-700 hover:bg-gray-600 text-white h-9 px-3 rounded-none"
+          >
+            Chat
+          </Button>
+        </div>
+      </div>
+
+      {/* Messages Area - Twitch-style with avatars */}
+      <div className="flex-1 overflow-y-auto px-3 py-2">
         {messages.length === 0 ? (
-          <div className="text-center py-8">
-            <MessageCircle className="h-8 w-8 text-gray-500 mx-auto mb-2" />
-            <p className="text-gray-400 text-sm">No messages yet</p>
-            <p className="text-gray-500 text-xs">Be the first to say something!</p>
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-sm">Welcome to the chat room!</p>
           </div>
         ) : (
-          <>
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex space-x-2 ${
-                  message.isCreator ? 'bg-purple-600/10 p-2 rounded-lg border border-purple-600/20' : ''
-                }`}
-              >
-                <Avatar className={`h-6 w-6 flex-shrink-0 ${message.isCreator ? 'ring-2 ring-purple-500' : ''}`}>
+          <div className="space-y-1">
+            {[...messages].reverse().map((message) => (
+              <div key={message.id} className="py-1 hover:bg-[#0e0e10] px-2 -mx-2 flex gap-2">
+                <Avatar className="h-8 w-8 flex-shrink-0 mt-0.5">
                   <AvatarImage src={message.avatar} />
                   <AvatarFallback className="text-xs bg-gray-700">
                     {message.user.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
-                
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <span className={`font-semibold text-sm truncate ${
-                      message.isCreator ? 'text-purple-300' : 'text-white'
+                  <div className="flex items-baseline gap-2">
+                    <span className={`font-semibold text-sm ${
+                      message.isCreator ? 'text-purple-400' : 'text-gray-400'
                     }`}>
                       {message.user}
+                      {message.isCreator && <span className="text-yellow-500 ml-1">★</span>}
                     </span>
-                    
-                    {message.isCreator && (
-                      <Crown className="h-3 w-3 text-yellow-500 flex-shrink-0" />
-                    )}
-                    
                     {message.tip && (
-                      <Badge 
-                        variant="default" 
-                        className={`text-xs px-1 py-0 ${getTipBadgeColor(message.tip)}`}
-                      >
-                        <DollarSign className="h-2 w-2 mr-1" />
-                        {message.tip}
-                      </Badge>
+                      <span className="text-xs bg-green-600 text-white px-1.5 py-0.5 rounded">
+                        ${message.tip}
+                      </span>
                     )}
-                    
-                    <span className="text-gray-500 text-xs flex-shrink-0">
+                    <span className="text-gray-600 text-xs">
                       {formatTimestamp(message.timestamp)}
                     </span>
                   </div>
-                  
-                  <p className="text-gray-300 text-sm break-words leading-relaxed">
+                  <p className="text-white text-sm mt-0.5 break-words">
                     {message.message}
                   </p>
                 </div>
               </div>
             ))}
-            <div ref={messagesEndRef} />
-          </>
-        )}
-      </CardContent>
-
-      {/* Message Input */}
-      <div className="p-3 border-t border-gray-700 bg-gray-800/50">
-        <div className="flex items-center space-x-2">
-          <div className="flex-1 relative">
-            <Input
-              ref={inputRef}
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={isConnected ? "Type a message..." : "Connect wallet to chat"}
-              disabled={!isConnected}
-              className="bg-gray-800 border-gray-600 text-white pr-10"
-              maxLength={500}
-            />
-            
-            {/* Emoji Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowEmojis(!showEmojis)}
-              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 text-gray-400 hover:text-white"
-            >
-              <Smile className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          <Button
-            onClick={handleSendMessage}
-            disabled={!isConnected || !messageText.trim()}
-            size="icon"
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Character Counter */}
-        {messageText && (
-          <div className="flex justify-between items-center mt-1 text-xs">
-            <span className="text-gray-500">
-              {isConnected ? 'Press Enter to send' : 'Connect wallet to chat'}
-            </span>
-            <span className={`text-gray-500 ${messageText.length > 450 ? 'text-yellow-400' : ''}`}>
-              {messageText.length}/500
-            </span>
           </div>
         )}
-
-        {/* Emoji Picker */}
-        {showEmojis && (
-          <div className="mt-2 p-2 bg-gray-700 rounded-lg border border-gray-600">
-            <div className="grid grid-cols-6 gap-1">
-              {emojis.map((emoji) => (
-                <Button
-                  key={emoji}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => addEmoji(emoji)}
-                  className="text-lg hover:bg-gray-600 h-8 w-8 p-0"
-                >
-                  {emoji}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Chat Guidelines */}
-        <div className="mt-2 text-xs text-gray-500">
-          <p>💡 Tips appear with special badges • Be respectful • Support ${creatorSymbol}!</p>
-        </div>
       </div>
     </div>
   );

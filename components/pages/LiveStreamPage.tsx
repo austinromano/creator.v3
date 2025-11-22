@@ -73,42 +73,34 @@ export function LiveStreamPage({ creator }: LiveStreamPageProps) {
   return (
     <div className="min-h-screen bg-[#0e0e10]">
       {/* Top Stats Bar */}
-      <div className="bg-[#18181b] border-b border-gray-800 px-4 py-3">
-        <div className="max-w-[1920px] mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-6 text-sm">
-            <div className="flex items-center space-x-2">
-              <Users className="h-4 w-4 text-purple-400" />
-              <div>
-                <div className="text-white font-semibold">{formatNumber(creator.holders)}</div>
-                <div className="text-xs text-gray-400">Holders</div>
-              </div>
+      <div className="bg-[#18181b] border-b border-gray-800 px-4 py-2">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-4 text-xs">
+            <div className="flex items-center space-x-1">
+              <Users className="h-3 w-3 text-purple-400" />
+              <span className="text-white font-medium">{formatNumber(creator.holders)}</span>
+              <span className="text-gray-400">Holders</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <Eye className="h-4 w-4 text-yellow-400" />
-              <div>
-                <div className="text-white font-semibold">{formatNumber(viewers || creator.viewers || 0)}</div>
-                <div className="text-xs text-gray-400">Watching</div>
-              </div>
+            <div className="flex items-center space-x-1">
+              <Eye className="h-3 w-3 text-yellow-400" />
+              <span className="text-white font-medium">{formatNumber(viewers || creator.viewers || 0)}</span>
+              <span className="text-gray-400">Watching</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <DollarSign className="h-4 w-4 text-green-400" />
-              <div>
-                <div className="text-white font-semibold">${creator.price.toFixed(6)}</div>
-                <div className="text-xs text-gray-400">Price</div>
-              </div>
+            <div className="flex items-center space-x-1">
+              <DollarSign className="h-3 w-3 text-green-400" />
+              <span className="text-white font-medium">${creator.price.toFixed(6)}</span>
+              <span className="text-gray-400">Price</span>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1">
               {isPositive ? (
-                <TrendingUp className="h-4 w-4 text-green-400" />
+                <TrendingUp className="h-3 w-3 text-green-400" />
               ) : (
-                <TrendingDown className="h-4 w-4 text-red-400" />
+                <TrendingDown className="h-3 w-3 text-red-400" />
               )}
-              <div>
-                <div className={`font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                  {isPositive ? '+' : ''}{creator.priceChange24h.toFixed(1)}%
-                </div>
-                <div className="text-xs text-gray-400">24h</div>
-              </div>
+              <span className={`font-medium ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                {isPositive ? '+' : ''}{creator.priceChange24h.toFixed(1)}%
+              </span>
+              <span className="text-gray-400">24h</span>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -117,24 +109,24 @@ export function LiveStreamPage({ creator }: LiveStreamPageProps) {
               variant="ghost"
               onClick={handleLike}
               disabled={hasLiked}
-              className={`text-white hover:bg-white/10 ${hasLiked ? 'text-red-400' : ''}`}
+              className={`text-white hover:bg-white/10 h-7 px-2 ${hasLiked ? 'text-red-400' : ''}`}
             >
-              <Heart className={`h-4 w-4 ${hasLiked ? 'fill-current' : ''}`} />
+              <Heart className={`h-3 w-3 ${hasLiked ? 'fill-current' : ''}`} />
             </Button>
             <Button
               size="sm"
               variant="ghost"
               onClick={handleShare}
-              className="text-white hover:bg-white/10"
+              className="text-white hover:bg-white/10 h-7 px-2"
             >
-              <Share2 className="h-4 w-4" />
+              <Share2 className="h-3 w-3" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Main Layout */}
-      <div className="max-w-[1920px] mx-auto">
+      {/* Main Layout - Contained Width */}
+      <div className="max-w-7xl mx-auto">
         {/* Video Player - Full Width */}
         <div className="aspect-video bg-black">
           <StreamPlayer
@@ -145,56 +137,53 @@ export function LiveStreamPage({ creator }: LiveStreamPageProps) {
           />
         </div>
 
-        {/* Stream Info + Chat Below Video */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-0">
-          {/* Stream Info - 75% */}
-          <div className="lg:col-span-3 bg-[#18181b] p-4">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center space-x-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={creator.avatar} alt={creator.name} />
-                  <AvatarFallback className="bg-purple-600">
-                    {creator.name.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h2 className="text-white font-bold">{creator.name}</h2>
-                  <p className="text-gray-400 text-sm">${creator.symbol}</p>
-                </div>
+        {/* Stream Info Below Video */}
+        <div className="bg-[#18181b] p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center space-x-3">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={creator.avatar} alt={creator.name} />
+                <AvatarFallback className="bg-purple-600">
+                  {creator.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h2 className="text-white font-bold text-lg">{creator.name}</h2>
+                <p className="text-gray-400 text-sm">${creator.symbol}</p>
               </div>
-              <TipButton
-                creator={creator}
-                onTip={sendTip}
-              />
             </div>
-            <p className="text-gray-300 text-sm mb-3">{creator.description}</p>
+            <TipButton
+              creator={creator}
+              onTip={sendTip}
+            />
+          </div>
+          <p className="text-gray-300 text-base mb-3">{creator.description}</p>
 
-            {/* Quick Stats */}
-            <div className="flex items-center space-x-4 text-xs text-gray-400">
-              <span className="flex items-center">
-                <Star className="h-3 w-3 mr-1 text-yellow-400" />
-                {formatNumber(likes)} likes
-              </span>
-              <span>•</span>
-              <span>Market Cap: ${formatNumber(creator.marketCap)}</span>
-            </div>
+          {/* Quick Stats */}
+          <div className="flex items-center space-x-4 text-sm text-gray-400">
+            <span className="flex items-center">
+              <Star className="h-4 w-4 mr-1 text-yellow-400" />
+              {formatNumber(likes)} likes
+            </span>
+            <span>•</span>
+            <span>Market Cap: ${formatNumber(creator.marketCap)}</span>
+          </div>
+        </div>
+
+        {/* Live Chat Below Stream Info */}
+        <div className="bg-[#18181b] border-t border-gray-800">
+          {/* Chat Header */}
+          <div className="px-4 py-2 bg-[#18181b]">
+            <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wide">Live Chat</h3>
           </div>
 
-          {/* Chat Sidebar - 25% */}
-          <div className="bg-[#18181b] border-l border-gray-800 flex flex-col h-[600px]">
-            {/* Chat Header */}
-            <div className="px-4 py-3 border-b border-gray-800">
-              <h3 className="text-white font-semibold text-sm">Live Chat</h3>
-            </div>
-
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-hidden">
-              <LiveChat
-                messages={messages || []}
-                onSendMessage={addMessage}
-                creatorSymbol={creator.symbol}
-              />
-            </div>
+          {/* Chat Messages */}
+          <div className="h-96">
+            <LiveChat
+              messages={messages || []}
+              onSendMessage={addMessage}
+              creatorSymbol={creator.symbol}
+            />
           </div>
         </div>
       </div>

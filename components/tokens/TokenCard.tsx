@@ -140,9 +140,9 @@ export function TokenCard({ creator, onQuickBuy }: TokenCardProps) {
 
         {/* Action Buttons */}
         <div className="flex space-x-2 pt-2">
-          <Link href={`/token/${creator.symbol}`} className="flex-1">
-            <Button 
-              variant="outline" 
+          <Link href={`/live/${creator.symbol}`} className="flex-1">
+            <Button
+              variant="outline"
               className="w-full border-purple-500 text-purple-300 hover:bg-purple-500/10 hover:text-white"
             >
               View
