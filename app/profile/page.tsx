@@ -245,10 +245,6 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-1 max-w-[1920px] mx-auto">
           {/* Stream Preview - Left Column (60%) */}
           <div className="lg:col-span-2 bg-[#18181b]">
-            <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-end">
-              <Settings className="h-4 w-4 text-gray-400 cursor-pointer hover:text-white" />
-            </div>
-
             <div className="p-4">
               {/* Video Preview */}
               <div className="relative bg-black rounded aspect-video overflow-hidden">
@@ -317,40 +313,18 @@ export default function ProfilePage() {
                   <AvatarImage src={user.image || userToken.avatar} />
                   <AvatarFallback className="bg-purple-600">{initials}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
+                <div>
                   <div className="font-semibold">Live!</div>
                   <Badge className={isLive ? "bg-red-600" : "bg-gray-600"}>
                     {isLive ? "LIVE" : "OFFLINE"}
                   </Badge>
                 </div>
               </div>
-
-              {/* Quick Actions */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold">Quick Actions</h3>
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <Button className="bg-purple-600 hover:bg-purple-700 flex-col h-auto py-4">
-                    <Edit3 className="h-5 w-5 mb-2" />
-                    <span className="text-xs">Edit Stream Info</span>
-                  </Button>
-                  <Button className="bg-pink-600 hover:bg-pink-700 flex-col h-auto py-4">
-                    <DollarSign className="h-5 w-5 mb-2" />
-                    <span className="text-xs">Manage Goals</span>
-                  </Button>
-                  <Button className="bg-purple-700 hover:bg-purple-800 flex-col h-auto py-4">
-                    <Star className="h-5 w-5 mb-2" />
-                    <span className="text-xs">Token Stats</span>
-                  </Button>
-                </div>
-              </div>
             </div>
           </div>
 
           {/* Chat + Activity Feed - Right Column */}
-          <div className="bg-[#18181b] border-l border-gray-800">
+          <div className="bg-[#18181b] border-l border-gray-800 flex flex-col h-[calc(100vh-180px)]">
             {/* My Chat */}
             <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -359,7 +333,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="p-4 h-[300px] overflow-y-auto">
+            <div className="p-4 flex-1 overflow-y-auto">
               <div className="text-sm text-gray-400 text-center py-8">
                 <MessageSquare className="h-12 w-12 mx-auto mb-2 text-gray-600" />
                 <p>Welcome to the chat room!</p>
@@ -384,7 +358,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="p-4 h-[300px] overflow-y-auto">
+            <div className="p-4 flex-1 overflow-y-auto">
               <div className="text-center py-12">
                 <div className="text-2xl font-bold mb-2">It's quiet. Too quiet...</div>
                 <p className="text-sm text-gray-400">

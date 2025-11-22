@@ -6,7 +6,7 @@ import { WalletConnect } from './WalletConnect';
 import { MobileNav } from './MobileNav';
 import { NetworkIndicator } from './NetworkIndicator';
 import { UserMenu } from './UserMenu';
-import { Sparkles, TrendingUp, Radio, Rocket, LogIn } from 'lucide-react';
+import { Sparkles, TrendingUp, Radio, Rocket, LogIn, Menu, ChevronDown, Star, Bell, Calendar, Wallet } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useSession } from 'next-auth/react';
 
@@ -51,20 +51,39 @@ export function Header() {
           </Link>
 
           {/* Right Side - Actions */}
-          <div className="flex items-center space-x-2 md:space-x-3">
+          <div className="flex items-center space-x-2">
+            {/* Deposit Button */}
             <Button
-              onClick={() => {
-                if (!isAuthenticated) {
-                  setShowAuthModal(true);
-                } else {
-                  window.location.href = '/create';
-                }
-              }}
               size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white px-3 md:px-6 py-2 font-semibold text-sm md:text-base"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg"
             >
-              <span className="hidden md:inline">Create Token</span>
-              <span className="md:hidden">Create</span>
+              Deposit
+            </Button>
+
+            {/* Withdraw Button */}
+            <Button
+              size="sm"
+              className="bg-purple-700 hover:bg-purple-800 text-white px-4 py-2 rounded-lg"
+            >
+              Withdraw
+            </Button>
+
+            {/* Star Icon */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="bg-gray-800 hover:bg-gray-700 text-white p-2.5 rounded-full"
+            >
+              <Star className="h-5 w-5" />
+            </Button>
+
+            {/* Bell Icon */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="bg-gray-800 hover:bg-gray-700 text-white p-2.5 rounded-full"
+            >
+              <Bell className="h-5 w-5" />
             </Button>
           </div>
         </div>
