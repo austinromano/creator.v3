@@ -54,7 +54,7 @@ export const useTokenStore = create<TokenState>()(
     (set, get) => ({
       tokens: mockCreators,
 
-      addToken: (tokenData) => {
+      addToken: (tokenData: CreateTokenInput) => {
         const id = generateTokenId();
         const created = new Date().toISOString();
         const initialPrice = 0.00001; // Starting price in SOL
@@ -144,6 +144,15 @@ export const useTokenStore = create<TokenState>()(
       partialize: (state) => ({
         tokens: state.tokens.filter(token => !mockCreators.some(mock => mock.id === token.id))
       }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<TokenState>;
+        // Merge persisted user-created tokens with mock creators
+        const userTokens = persisted?.tokens || [];
+        return {
+          ...currentState,
+          tokens: [...userTokens, ...mockCreators],
+        };
+      },
     }
   )
 );
