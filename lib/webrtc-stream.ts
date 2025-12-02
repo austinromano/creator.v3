@@ -1,62 +1,134 @@
-// Simple WebRTC streaming using BroadcastChannel for local signaling
+// WebRTC streaming with WebSocket signaling for cross-browser support
 export class WebRTCStreamer {
   private peerConnection: RTCPeerConnection | null = null;
-  private signalingChannel: BroadcastChannel;
+  private ws: WebSocket | null = null;
   private streamId: string;
   private onStreamCallback?: (stream: MediaStream) => void;
-  private onViewerRequest?: () => Promise<void>;
   private localStream?: MediaStream;
+  private role: 'broadcaster' | 'viewer' | null = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+
+  // Signaling server URL - use environment variable or default to localhost
+  private signalingUrl: string;
 
   constructor(streamId: string) {
     this.streamId = streamId;
-    this.signalingChannel = new BroadcastChannel(`stream-${streamId}`);
-    this.setupSignaling();
+    this.signalingUrl = process.env.NEXT_PUBLIC_SIGNALING_URL || 'ws://localhost:8080';
   }
 
-  private setupSignaling() {
-    this.signalingChannel.onmessage = async (event) => {
-      const { type, data } = event.data;
-      console.log(`[${this.streamId}] Received signaling message:`, type);
+  private connectWebSocket(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        console.log(`[${this.streamId}] Connecting to signaling server: ${this.signalingUrl}`);
+        this.ws = new WebSocket(this.signalingUrl);
 
-      // Handle viewer request for stream
-      if (type === 'request-stream') {
-        console.log(`[${this.streamId}] Viewer requesting stream`);
-        if (this.onViewerRequest) {
-          await this.onViewerRequest();
+        this.ws.onopen = () => {
+          console.log(`[${this.streamId}] Connected to signaling server`);
+          this.reconnectAttempts = 0;
+          resolve();
+        };
+
+        this.ws.onclose = () => {
+          console.log(`[${this.streamId}] Disconnected from signaling server`);
+          this.handleDisconnect();
+        };
+
+        this.ws.onerror = (error) => {
+          console.error(`[${this.streamId}] WebSocket error:`, error);
+          reject(error);
+        };
+
+        this.ws.onmessage = (event) => {
+          this.handleSignalingMessage(JSON.parse(event.data));
+        };
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  private handleDisconnect() {
+    if (this.reconnectAttempts < this.maxReconnectAttempts && this.role) {
+      this.reconnectAttempts++;
+      console.log(`[${this.streamId}] Attempting reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+
+      this.reconnectTimeout = setTimeout(async () => {
+        try {
+          await this.connectWebSocket();
+          // Re-join with same role
+          if (this.role === 'broadcaster' && this.localStream) {
+            this.sendMessage({ type: 'join-as-broadcaster', streamId: this.streamId });
+          } else if (this.role === 'viewer') {
+            this.sendMessage({ type: 'join-as-viewer', streamId: this.streamId });
+          }
+        } catch (error) {
+          console.error(`[${this.streamId}] Reconnect failed:`, error);
         }
-        return;
-      }
+      }, 2000 * this.reconnectAttempts);
+    }
+  }
 
-      if (!this.peerConnection) {
-        console.log(`[${this.streamId}] No peer connection, ignoring message`);
-        return;
-      }
+  private sendMessage(message: object) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ ...message, streamId: this.streamId }));
+    } else {
+      console.warn(`[${this.streamId}] WebSocket not open, cannot send message`);
+    }
+  }
 
-      switch (type) {
-        case 'offer':
-          await this.handleOffer(data);
-          break;
-        case 'answer':
-          await this.handleAnswer(data);
-          break;
-        case 'ice-candidate':
-          await this.handleIceCandidate(data);
-          break;
-      }
-    };
+  private async handleSignalingMessage(message: { type: string; data?: any; viewerId?: string }) {
+    console.log(`[${this.streamId}] Received signaling message:`, message.type);
+
+    switch (message.type) {
+      case 'broadcaster-available':
+        // Broadcaster is ready, request the stream
+        console.log(`[${this.streamId}] Broadcaster available, requesting stream`);
+        this.sendMessage({ type: 'request-stream' });
+        break;
+
+      case 'broadcaster-left':
+        console.log(`[${this.streamId}] Broadcaster left`);
+        if (this.peerConnection) {
+          this.peerConnection.close();
+          this.peerConnection = null;
+        }
+        break;
+
+      case 'viewer-request':
+        // A viewer wants the stream
+        if (this.role === 'broadcaster' && this.localStream) {
+          console.log(`[${this.streamId}] Viewer requested stream, creating offer`);
+          await this.createOfferForViewer(message.viewerId);
+        }
+        break;
+
+      case 'offer':
+        await this.handleOffer(message.data);
+        break;
+
+      case 'answer':
+        await this.handleAnswer(message.data);
+        break;
+
+      case 'ice-candidate':
+        await this.handleIceCandidate(message.data);
+        break;
+    }
   }
 
   private createPeerConnection() {
     const config: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
       ]
     };
 
     this.peerConnection = new RTCPeerConnection(config);
 
-    // Connection state tracking
     this.peerConnection.onconnectionstatechange = () => {
       console.log(`[${this.streamId}] Connection state:`, this.peerConnection?.connectionState);
     };
@@ -72,18 +144,15 @@ export class WebRTCStreamer {
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         console.log(`[${this.streamId}] Sending ICE candidate`);
-        this.signalingChannel.postMessage({
+        this.sendMessage({
           type: 'ice-candidate',
           data: event.candidate.toJSON()
         });
-      } else {
-        console.log(`[${this.streamId}] ICE gathering complete`);
       }
     };
 
     this.peerConnection.ontrack = (event) => {
       console.log(`[${this.streamId}] Received remote track:`, event.track.kind);
-      console.log(`[${this.streamId}] Stream tracks:`, event.streams[0]?.getTracks().map(t => t.kind));
       if (this.onStreamCallback && event.streams[0]) {
         this.onStreamCallback(event.streams[0]);
       }
@@ -95,91 +164,90 @@ export class WebRTCStreamer {
   async startBroadcast(stream: MediaStream) {
     console.log(`[${this.streamId}] Starting broadcast...`);
     console.log(`[${this.streamId}] Stream tracks:`, stream.getTracks().map(t => `${t.kind} (${t.readyState})`));
-    this.localStream = stream;
 
-    // Verify stream has tracks
+    this.localStream = stream;
+    this.role = 'broadcaster';
+
     if (stream.getTracks().length === 0) {
       console.error(`[${this.streamId}] No tracks in stream!`);
       return;
     }
 
-    // Set up handler for viewer requests
-    this.onViewerRequest = async () => {
-      console.log(`[${this.streamId}] Creating new peer connection for viewer`);
+    try {
+      await this.connectWebSocket();
+      this.sendMessage({ type: 'join-as-broadcaster', streamId: this.streamId });
+      console.log(`[${this.streamId}] Broadcast ready, waiting for viewers`);
+    } catch (error) {
+      console.error(`[${this.streamId}] Failed to connect to signaling server:`, error);
+    }
+  }
 
-      // Verify stream still has active tracks
-      const activeTracks = this.localStream!.getTracks().filter(t => t.readyState === 'live');
-      console.log(`[${this.streamId}] Active tracks:`, activeTracks.map(t => t.kind));
+  private async createOfferForViewer(viewerId?: string) {
+    if (!this.localStream) {
+      console.error(`[${this.streamId}] No local stream for offer`);
+      return;
+    }
 
-      if (activeTracks.length === 0) {
-        console.error(`[${this.streamId}] No active tracks available!`);
-        return;
-      }
+    // Close existing connection
+    if (this.peerConnection) {
+      this.peerConnection.close();
+    }
 
-      // Close existing connection if any
-      if (this.peerConnection) {
-        this.peerConnection.close();
-      }
+    const pc = this.createPeerConnection();
 
-      const pc = this.createPeerConnection();
+    // Add all tracks
+    this.localStream.getTracks().forEach(track => {
+      console.log(`[${this.streamId}] Adding track:`, track.kind, track.readyState);
+      pc.addTrack(track, this.localStream!);
+    });
 
-      // Add all tracks from the stream to the peer connection
-      this.localStream!.getTracks().forEach(track => {
-        console.log(`[${this.streamId}] Adding track:`, track.kind, track.readyState, track.enabled);
-        pc.addTrack(track, this.localStream!);
-      });
-
-      console.log(`[${this.streamId}] All tracks added, creating offer...`);
-
-      // Create and send offer
+    try {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      console.log(`[${this.streamId}] Offer created, SDP:`, offer.sdp?.substring(0, 100) + '...');
-
-      this.signalingChannel.postMessage({
+      console.log(`[${this.streamId}] Offer created, sending to viewer`);
+      this.sendMessage({
         type: 'offer',
-        data: offer
+        data: offer,
+        targetViewerId: viewerId
       });
-
-      console.log(`[${this.streamId}] Offer sent to viewer`);
-    };
-
-    console.log(`[${this.streamId}] Broadcast ready, waiting for viewers`);
+    } catch (error) {
+      console.error(`[${this.streamId}] Error creating offer:`, error);
+    }
   }
 
   async startViewing(onStream: (stream: MediaStream) => void) {
     console.log(`[${this.streamId}] Starting viewing...`);
     this.onStreamCallback = onStream;
-    this.createPeerConnection();
+    this.role = 'viewer';
 
-    // Request broadcast
-    console.log(`[${this.streamId}] Requesting stream from broadcaster...`);
-    this.signalingChannel.postMessage({ type: 'request-stream' });
+    try {
+      await this.connectWebSocket();
+      this.createPeerConnection();
+      this.sendMessage({ type: 'join-as-viewer', streamId: this.streamId });
+      console.log(`[${this.streamId}] Joined as viewer, waiting for broadcaster`);
+    } catch (error) {
+      console.error(`[${this.streamId}] Failed to connect to signaling server:`, error);
+    }
   }
 
   private async handleOffer(offer: RTCSessionDescriptionInit) {
     console.log(`[${this.streamId}] Handling offer...`);
     if (!this.peerConnection) {
-      console.error(`[${this.streamId}] No peer connection for offer`);
-      return;
+      this.createPeerConnection();
     }
 
     try {
-      await this.peerConnection.setRemoteDescription(offer);
+      await this.peerConnection!.setRemoteDescription(offer);
       console.log(`[${this.streamId}] Remote description set`);
 
-      const answer = await this.peerConnection.createAnswer();
-      console.log(`[${this.streamId}] Answer created`);
+      const answer = await this.peerConnection!.createAnswer();
+      await this.peerConnection!.setLocalDescription(answer);
 
-      await this.peerConnection.setLocalDescription(answer);
-      console.log(`[${this.streamId}] Local description set`);
-
-      this.signalingChannel.postMessage({
+      this.sendMessage({
         type: 'answer',
         data: answer
       });
-
       console.log(`[${this.streamId}] Answer sent`);
     } catch (error) {
       console.error(`[${this.streamId}] Error handling offer:`, error);
@@ -224,7 +292,14 @@ export class WebRTCStreamer {
   }
 
   close() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
     this.stopBroadcast();
-    this.signalingChannel.close();
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    this.role = null;
   }
 }

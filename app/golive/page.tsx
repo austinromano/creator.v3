@@ -121,7 +121,14 @@ export default function ProfilePage() {
   }
 
   if (!session?.user) {
-    return null;
+    return (
+      <div className="min-h-screen bg-[#0e0e10] text-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-500 mx-auto mb-4" />
+          <p className="text-gray-400">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
   const initials = username
@@ -488,6 +495,11 @@ export default function ProfilePage() {
                   {isLive && (
                     <div className="text-xs text-green-400 mt-1">
                       Broadcasting as: {userToken.symbol}
+                    </div>
+                  )}
+                  {isLive && (
+                    <div className="text-xs text-blue-400 mt-1">
+                      Viewers can watch at: <a href={`/live/${userToken.symbol}`} target="_blank" className="underline hover:text-blue-300">/live/{userToken.symbol}</a>
                     </div>
                   )}
                 </div>

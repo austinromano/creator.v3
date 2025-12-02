@@ -54,38 +54,69 @@ export function StreamPlayer({ creator, isLive, viewers, className = '' }: Strea
     console.log('Attempting to connect to WebRTC stream for:', creator.symbol);
     setConnectionStatus('buffering');
 
-    webrtcStreamerRef.current = new WebRTCStreamer(creator.symbol);
-    webrtcStreamerRef.current.startViewing((stream) => {
-      console.log('Received WebRTC stream:', stream);
-      console.log('Video element:', videoRef.current);
-      console.log('Stream tracks:', stream.getTracks());
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        console.log('Stream assigned to video element');
-        videoRef.current.play()
-          .then(() => {
-            console.log('Video playback started successfully');
-            setHasWebRTCStream(true);
-            setConnectionStatus('connected');
-          })
-          .catch(err => {
-            console.error('Error playing video:', err);
-            // Try to play muted if autoplay is blocked
-            videoRef.current!.muted = true;
-            return videoRef.current!.play();
-          })
-          .then(() => {
-            console.log('Video playing (muted)');
-            setHasWebRTCStream(true);
-            setConnectionStatus('connected');
-          })
-          .catch(err => console.error('Failed to play video even when muted:', err));
-      } else {
-        console.error('Video element not found!');
+    let retryCount = 0;
+    const maxRetries = 10;
+    let retryTimeout: NodeJS.Timeout | null = null;
+    let connected = false;
+
+    const connectToStream = () => {
+      if (connected) return; // Stop if already connected
+
+      if (webrtcStreamerRef.current) {
+        webrtcStreamerRef.current.close();
       }
-    });
+
+      webrtcStreamerRef.current = new WebRTCStreamer(creator.symbol);
+      webrtcStreamerRef.current.startViewing((stream) => {
+        connected = true; // Mark as connected
+        if (retryTimeout) clearTimeout(retryTimeout); // Clear retry timer
+
+        console.log('Received WebRTC stream:', stream);
+        console.log('Video element:', videoRef.current);
+        console.log('Stream tracks:', stream.getTracks());
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          console.log('Stream assigned to video element');
+          videoRef.current.play()
+            .then(() => {
+              console.log('Video playback started successfully');
+              setHasWebRTCStream(true);
+              setConnectionStatus('connected');
+            })
+            .catch(err => {
+              console.error('Error playing video:', err);
+              // Try to play muted if autoplay is blocked
+              videoRef.current!.muted = true;
+              return videoRef.current!.play();
+            })
+            .then(() => {
+              console.log('Video playing (muted)');
+              setHasWebRTCStream(true);
+              setConnectionStatus('connected');
+            })
+            .catch(err => console.error('Failed to play video even when muted:', err));
+        } else {
+          console.error('Video element not found!');
+        }
+      });
+
+      // Retry connection if not connected after 3 seconds
+      retryTimeout = setTimeout(() => {
+        if (!connected && retryCount < maxRetries) {
+          retryCount++;
+          console.log(`Retrying WebRTC connection (${retryCount}/${maxRetries})...`);
+          connectToStream();
+        }
+      }, 3000);
+    };
+
+    connectToStream();
 
     return () => {
+      connected = true; // Prevent further retries on cleanup
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
       if (webrtcStreamerRef.current) {
         webrtcStreamerRef.current.close();
         webrtcStreamerRef.current = null;

@@ -19,10 +19,11 @@ export default function LivePage({ params }: LivePageProps) {
     notFound();
   }
 
-  if (!creator.isLive) {
-    // Redirect to token page if not live
-    notFound();
-  }
+  // Allow viewing even if not marked as live - the StreamPlayer will show
+  // "Waiting for broadcaster" if no stream is available. This enables
+  // viewers to wait for a stream to start.
+  // Force isLive to true so StreamPlayer attempts connection
+  const creatorWithLive = { ...creator, isLive: true };
 
-  return <LiveStreamPage creator={creator} />;
+  return <LiveStreamPage creator={creatorWithLive} />;
 }

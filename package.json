@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "signaling": "node server/signaling-server.js"
   },
   "dependencies": {
     "@auth/core": "^0.34.3",
@@ -46,6 +47,7 @@
     "recharts": "^3.4.1",
     "tailwind-merge": "^3.4.0",
     "tweetnacl": "^1.0.3",
+    "ws": "^8.18.3",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },

@@ -1,0 +1,15 @@
+{
+  "name": "creator-signaling-server",
+  "version": "1.0.0",
+  "description": "WebRTC signaling server for creator.fun",
+  "main": "signaling-server.js",
+  "scripts": {
+    "start": "node signaling-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
